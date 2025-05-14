@@ -139,11 +139,20 @@ def home():
             ]
             })
     else:
-        posts = posts_collection.find({"viewToggle": True})
+        posts = list(posts_collection.find({"viewToggle": True}))
+
+    for post in posts:
+        user = db.users.find_one({'_id': ObjectId(post['userId'])})
+        if user:
+            season = user.get('season', '미정')
+            name = user.get('name', '알 수 없음')
+            post['user_display'] = f"{season}기-{name}"
+        else:
+            post['user_display'] = "미정-알 수 없음"
 
     return render_template(
         "home.html",
-        cards=list(posts),
+        cards=posts,
         user_id=user_id,
         profile_image=profile_image
     )

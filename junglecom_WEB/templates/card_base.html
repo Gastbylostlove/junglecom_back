@@ -35,6 +35,9 @@
         {{ card.title }}
       </a>
       <p class="mb-3">{{ card.description[:200] }}</p>
+      <p class="mb-0 text-muted" style="font-size: 0.85rem;">
+        {{ card.user_display }}
+      </p>
     </div>
     {% if request.endpoint != 'home' %}
     <div class="card-footer bg-white border-0 text-center">

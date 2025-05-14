@@ -64,12 +64,12 @@
   <!-- <header>hello</header> -->
   <header class="py-3 border-bottom mb-4">
     <div class="container d-flex justify-content-between align-items-center">
-      <h2 class="mb-0">JungleCom</h2>
+      <img src="/static/images/logo2.png" class="mx-auto" style="height: 150px;">
       <div>
         {% if user_id %}
         <a href="/blog_edit" class="btn btn-lg">
           <img src="{{ url_for('static', filename='images/' + (profile_image)) }}" alt="프로필 이미지"
-            style="width: 32px; height: 32px; border-radius: 50%;">
+            style="height: 45px; border-radius: 50%;">
         </a>
         {% else %}
         <a href="/register" class="btn btn-outline-success btn-sm mr-2">회원가입</a>
