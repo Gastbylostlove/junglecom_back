@@ -234,9 +234,9 @@ def blog_edit():
     except (ExpiredSignatureError, InvalidTokenError):
         return redirect('/login')
 
-    cards = list(posts_collection.find())
+    cards = posts_collection.find({"userId": user['_id']})
 
-    return render_template('blog_edit.html', cards=cards, user=user)
+    return render_template('blog_edit.html', cards=list(cards), user=user)
 
 @app.route('/profile_edit', methods=['GET'])
 def profile_edit():
