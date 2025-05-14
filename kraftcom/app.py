@@ -19,11 +19,11 @@ SECRET_KEY = os.getenv('SECRET_KEY')        # JWT 서명을 위한 비밀키
 MONGO_URI = os.getenv('MONGO_URI')          # MongoDB URI 주소
 MONGO_DB_NAME = os.getenv('MONGO_DB_NAME')      # 사용할 MongoDB 데이터베이스 이름
 
-app = Flask(__name__)       
+app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
 # MongoDB 클라이언트 연결 및 DB 생성
-client = MongoClient(MONGO_URI)
+client = MongoClient('mongodb://abc1:abc1@54.180.249.140:27017')
 db = client[MONGO_DB_NAME]
 
 # DB 컬레션 참조 변수
@@ -34,9 +34,18 @@ posts_collection = db['posts']          # 게시글 정보 저장 컬렉션
 PAGE = 20       # 페이징 처리를 위한 한 페이지 당 카드 수
 
 # 회원 가입 페이지 반환
-@app.route('/register')
+@app.route('/register', methods=['POST', 'GET'])
 def register_page():
-    return render_template('register.html')
+    if request.method == 'GET':
+        return render_template('register.html')
+
+    data = request.form.to_dict()
+    required = ['name', 'id', 'password', 'email', 'season']        # 필수 항목만
+    if not all(data.get(f) for f in required):
+        return jsonify({'result': 'fail', 'message': '필수 항목을 모두 입력해주세요'}), 400
+
+    result = register_user(data, users_collection, crawlJobs_collection)
+    return redirect('./')
 
 # 로그인 페이지 반환
 @app.route('/login')
@@ -44,8 +53,11 @@ def login_page():
     return render_template('login.html')
 
 # 회원가입 요청 처리
-@app.route('/register', methods=['POST'])
+@app.route('/register', methods=['POST', 'GET'])
 def register():
+    if request.method == 'GET':
+        return render_template('register.html')
+
     data = request.form.to_dict()       # form 데이터를 딕셔너리로 변환
     required = ['name', 'id', 'password', 'email', 'season']        # 필수 입력 항목 목록
 
@@ -57,82 +69,72 @@ def register():
     result = register_user(data, users_collection, crawlJobs_collection)
     return redirect('./')
 
-# 로그인
+# # 로그인 요청 처리
 # @app.route('/login', methods=['POST'])
 # def login():
 #     data = request.form.to_dict()
-#     user_id = data.get('id')
-#     password = data.get('password')
+#     user_id = data.get('id')        # 아이디 추출
+#     password = data.get('password')     # 비밀번호 추출
 
+#     # 아이디 또는 비밀번호 하나라도 없으면 에러 발생
 #     if not user_id or not password:
-#         return "ID와 비밀번호를 입력해주세요.", 400     # ID 또는 PW가 비어 있을 경우 400 반환
+#         return "ID와 비밀번호를 입력해주세요.", 400
 
-#     result = login_user(user_id, password, users_collection, SECRET_KEY)    # login_user 모듈에서 사용자 존애 여부, 비밀번호 일치 검증
+#     # 로그인 서비스 함수 호출
+#     result = login_user(user_id, password, users_collection, SECRET_KEY)
+
 #     if result['result'] == 'success':
+#         user = get_user_by_id(user_id, users_collection)
 
-#         # 로그인 성공 시  사용자 정보 가져오기
-#         user = users_collection.find_one({'id' : user_id})
-
-#         # 사용자 정보 세션에 저장
 #         session['user_id'] = user_id
-#         session['profile_image'] = user.get('profile_image')
+#         session['profile_image'] = user.get('profile_image', 'default.png')  # None일 경우 default 처리
 
-#         response = make_response(redirect('/'))    # 로그인 성공 시 토큰 발급
+#         print(f"Session profile_image: {session['profile_image']}")  # 디버깅용 출력
+
+#         response = make_response(redirect('/'))
 #         token = result['token']
 
-#         # 세션 쿠키로 설정(브라우저 종료 시 사라짐)
 #         response.set_cookie(
-#             'access_token',     # 쿠키 이름
-#             token,              # 토큰 값
-#             httponly = True,    # js에서 접근 불가
-#             samesite = 'LAX',   # CSRF 완화
-#             secure = False      # HTTPS에서만 쿠키 전송
+#             'access_token',
+#             token,
+#             httponly=True,
+#             samesite='Lax',
+#             secure=True  # 배포 시 True로 변경 권장
 #         )
 #         return response
 #     else:
-#         return redirect('./')
+#         return result['message'], 401
 
-# 로그인 요청 처리
-@app.route('/login', methods=['POST'])
+
+@app.route('/login', methods=['POST', 'GET'])
 def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+
     data = request.form.to_dict()
-    user_id = data.get('id')        # 아이디 추출
-    password = data.get('password')     # 비밀번호 추출
+    user_id = data.get('id')
+    password = data.get('password')
 
-    # 아이디 또는 비밀번호 하나라도 없으면 에러 발생
     if not user_id or not password:
-        return "ID와 비밀번호를 입력해주세요.", 400
+        return "ID와 비밀번호를 입력해주세요.", 400     # ID 또는 PW가 비어 있을 경우 400 반환
 
-    # 로그인 서비스 함수 호출
     result = login_user(user_id, password, users_collection, SECRET_KEY)
 
     if result['result'] == 'success':
-        # ✅ 로그인 성공: 사용자 정보 조회
-        user = get_user_by_id(user_id, users_collection)
-
-        # ✅ 세션에 사용자 정보 저장
-        session['user_id'] = user_id
-        session['profile_image'] = user.get('profile_image', 'default.png')  # None일 경우 default 처리
-
-        # 세션 저장 후 확인 (디버깅)
-        print(f"Session profile_image: {session['profile_image']}")  # 디버깅용 출력
-
-        # ✅ 응답에 토큰을 쿠키로 포함시켜 리다이렉트
-        response = make_response(redirect('/'))
+        response = make_response(redirect('/'))    # 로그인 성공 시 토큰 발급
         token = result['token']
 
+        # 세션 쿠키로 설정(브라우저 종료 시 사라짐)
         response.set_cookie(
-            'access_token',
-            token,
-            httponly=True,
-            samesite='Lax',
-            secure=True  # 배포 시 True로 변경 권장
+            'access_token',     # 쿠키 이름
+            token,              # 토큰 값
+            httponly = True,    # js에서 접근 불가
+            samesite = 'LAX',   # CSRF 완화
+            secure = False      # HTTPS에서만 쿠키 전송
         )
         return response
     else:
-        return result['message'], 401
-
-
+        return redirect('./')
 
 # 토큰 인증 필요할 경우 사용 (마이 페이지 사용 시)
 @app.route('/mypage')
@@ -155,11 +157,10 @@ def mypage():
     except jwt.InvalidTokenError:       # 토큰이 위조 되었거나 구조가 잘못된 경우
         return redirect('/login')       # 로그인 리다이텍트
 
-
 # 로그아웃
 @app.route('/logout')
 def logout():
-    response = make_response(redirect('/login'))    # /logout에 접근했을 때, 서버가 login 페이지로 이동
+    response = make_response(redirect('/'))    # /logout에 접근했을 때, 서버가 login 페이지로 이동
     response.set_cookie('access_token', '', max_age=0)  # 쿠키 삭제 : set_cookie는 쿠키를 설정하는 함수지만, value는 빈 문자열, max_age = 0(만료시간 0초라는 의미)을 함께 지정하면 쿠키 삭제 의미
     return response
 
@@ -171,27 +172,6 @@ def slice_page(cursor: int):
     subset = subset[: PAGE + 1]         # 다음 페이지 유무 확인용
     next_cur = subset[-1]["_id"] if len(subset) > PAGE else None    # 다음 커서 설정
     return subset[:PAGE], next_cur
-
-# @app.route("/")
-# def home():
-#     token = request.cookies.get('access_token')
-#     user_id = None
-
-#     if token:
-#         try:
-#             payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-#             user_id = payload.get('id')
-
-#         except ExpiredSignatureError:
-#             print("token expired")
-#         except InvalidTokenError:
-#             print("invalid token")
-    
-#     print(user_id)
-
-#     cards, next_cursor = slice_page(cursor=0) # 메인 화면에서는 cursor가 0
-#     return render_template("home.html", cards=cards, next_cursor=next_cursor, user_id=user_id)
-
 
 @app.route("/")
 def home():
@@ -230,8 +210,6 @@ def home():
         profile_image=profile_image
     )
 
-
-
 # 카드 데이터만 AJAX로 로드할 떄 사용되는 API
 @app.route("/api/cards")
 def api_cards():
@@ -240,26 +218,31 @@ def api_cards():
     html = render_template("_card_frag.html", cards=cards)      # 카드 프래그먼트 렌더링
     return jsonify(html=html, next_cursor=next_cursor)
 
-
 # 회원정보 수정
-@app.route("/mypage/edit", methods=['POST'])
+@app.route("/edit", methods=['POST', 'GET'])
 def update_user():
     token = request.cookies.get('access_token')  # 브라우저 쿠키에서 JWT 토큰을 가져옴
     if not token:
-        return jsonify({'result': 'fail', 'message': '인증이 필요합니다.'}), 401  # 인증 없으면 401 에러
+        # return jsonify({'result': 'fail', 'message': '인증이 필요합니다.'}), 401  # 인증 없으면 401 에러
+        redirect('/login')
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])  # 토큰 복호화
         user_id = payload['id']  # 토큰에서 사용자 ID 추출
         user = users_collection.find_one({'id': user_id})  # DB에서 사용자 정보 조회
-
         if not user:
-            return jsonify({'result': 'fail', 'message': '사용자가 존재하지 않습니다.'}), 404  # 사용자가 없는 경우
+            # return jsonify({'result': 'fail', 'message': '사용자가 존재하지 않습니다.'}), 404  # 사용자가 없는 경우
+           return redirect('/login')
+    except (ExpiredSignatureError, InvalidTokenError):
+        return redirect('/login')
 
-    except jwt.ExpiredSignatureError:  # 만료된 토큰 처리
-        return jsonify({'result': 'fail', 'message': '토큰이 만료되었습니다. 로그인해주세요.'}), 401
-    except jwt.InvalidTokenError:  # 잘못된 토큰 처리
-        return jsonify({'result': 'fail', 'message': '잘못된 토큰입니다. 다시 로그인해주세요.'}), 401
+    if request.method == 'GET':
+        return render_template('base.html', user=user)
+
+    # except jwt.ExpiredSignatureError:  # 만료된 토큰 처리
+    #     return jsonify({'result': 'fail', 'message': '토큰이 만료되었습니다. 로그인해주세요.'}), 401
+    # except jwt.InvalidTokenError:  # 잘못된 토큰 처리
+    #     return jsonify({'result': 'fail', 'message': '잘못된 토큰입니다. 다시 로그인해주세요.'}), 401
 
     # 사용자 정보 수정 함수 호출
     data = request.json
@@ -268,6 +251,75 @@ def update_user():
 
     result = update_user_info(data, users_collection)
     return jsonify(result)
+
+
+@app.route('/blog_edit', methods=['GET'])
+def blog_edit():
+    token = request.cookies.get('access_token')
+    if not token:
+        return redirect('/login')
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = payload['id']
+        user = users_collection.find_one({'id': user_id})
+        if not user:
+            return redirect('/login')
+    except (ExpiredSignatureError, InvalidTokenError):
+        return redirect('/login')
+
+    cards = list(posts_collection.find())
+
+    return render_template('blog_edit.html', cards=cards, user=user)
+
+@app.route('/profile_edit', methods=['GET'])
+def profile_edit():
+    token = request.cookies.get('access_token')
+    if not token:
+        return redirect('/login')
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = payload.get('id')
+        user = users_collection.find_one({'id': user_id})
+        if not user:
+            return redirect('/login')
+    except (ExpiredSignatureError, InvalidTokenError):
+        return redirect('/login')
+
+    return render_template('profile_edit.html', user=user)
+
+
+@app.route('/update_profile', methods=['POST'])
+def update_profile():
+    # 쿠키에서 토큰을 가져와 복호화
+    token = request.cookies.get('access_token')
+    if not token:
+        return redirect('/login')
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        user_id = payload.get('id')
+    except Exception as e:
+        return redirect('/login')
+
+    # 요청 데이터 가져오기
+    form_data = request.form.to_dict()
+    form_data['id'] = user_id  # 토큰에서 추출한 id를 form 데이터에 추가
+
+    # 서비스 함수 호출
+    result = update_user_info(form_data, users_collection)
+
+    # 처리 결과에 따라 응답
+    if result['result'] == 'success':
+        return render_template('profile_edit.html', message="수정 완료!", user=form_data)
+    else:
+        return render_template('profile_edit.html', message=result['message'], user=form_data)
+
+@app.route('/update_blog', methods=['POST'])
+def update_blog():
+    update_user_info
+    return
 
 
 
