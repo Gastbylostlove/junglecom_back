@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template, make_response, redirect
+from services.edit_service import update_user_info
 from services.user_service import register_user
 from services.auth_service import login_user
 from pymongo import MongoClient
@@ -127,6 +128,36 @@ def api_cards():
     html = render_template("_card_frag.html", cards=cards)
     return jsonify(html=html, next_cursor=next_cursor)
 
+
+# 회원정보 수정
+@app.route("/mypage/edit", methods=['POST'])
+def update_user():
+    token = request.cookies.get('access_token')  # 브라우저 쿠키에서 JWT 토큰을 가져옴
+    if not token:
+        return jsonify({'result': 'fail', 'message': '인증이 필요합니다.'}), 401  # 인증 없으면 401 에러
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])  # 토큰 복호화
+        user_id = payload['id']  # 토큰에서 사용자 ID 추출
+        user = users_collection.find_one({'id': user_id})  # DB에서 사용자 정보 조회
+
+        if not user:
+            return jsonify({'result': 'fail', 'message': '사용자가 존재하지 않습니다.'}), 404  # 사용자가 없는 경우
+
+    except jwt.ExpiredSignatureError:  # 만료된 토큰 처리
+        return jsonify({'result': 'fail', 'message': '토큰이 만료되었습니다. 로그인해주세요.'}), 401
+    except jwt.InvalidTokenError:  # 잘못된 토큰 처리
+        return jsonify({'result': 'fail', 'message': '잘못된 토큰입니다. 다시 로그인해주세요.'}), 401
+
+    # 사용자 정보 수정 함수 호출
+    data = request.json
+    if 'id' not in data:
+        return jsonify({'result': 'fail', 'message': '아이디는 필수 입력입니다.'}), 400
+    
+    result = edit_service.update_user_info(data, users_collection)
+    return jsonify(result)
+
+
+
 if __name__ == '__main__':
-    print("1")
     app.run(debug=True)
