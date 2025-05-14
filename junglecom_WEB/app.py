@@ -162,7 +162,7 @@ def home():
             ]
             })
     else:
-        posts = posts_collection.find()
+        posts = posts_collection.find({"viewToggle": True})
 
     return render_template(
         "home.html",
