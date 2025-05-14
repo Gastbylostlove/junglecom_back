@@ -1,10 +1,12 @@
 {% for card in cards %}
 <div class="col-md-4 mb-4">
   <div class="card h-100 border rounded p-3">
-    <img src="{{ card.ogImage }}"
-      class="card-img-top"
-      style="height: 180px; object-fit: cover;">
-    <h5>{{ card.title }}</h5>
+    <img src="data:image/jpeg;base64,{{ card.ogImage }}" class="card-img-top mb-2"
+      style="height: 150px; object-fit: cover;">
+    <a href="{{ card.guid }}" class="stretched-link text-dark mb-3" target="_blank"
+      style="text-decoration: none; font-weight: bold;">
+      {{ card.title }}
+    </a>
     <p class="mb-1">{{ card.description[:200] }}</p>
   </div>
 </div>

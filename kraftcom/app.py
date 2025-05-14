@@ -7,19 +7,18 @@ from pymongo import MongoClient                         # MongoDB와 연결하�
 import jwt                  # JWT 사용
 from jwt import ExpiredSignatureError, InvalidTokenError        # JWT 예외 처리용
 from datetime import datetime, timedelta        # 토큰 유효 시간 설정에  사용
-import secrets      # 세션 키 등 보안용 랜덤 문자열 생성
 import os       # OS 환경 변수 접근
 from dotenv import load_dotenv      # .env 파일에서 환경 변수 로드
-
+from bson import ObjectId
 
 # .env 로드 및 환경 변수 설정
 load_dotenv()
 
-SECRET_KEY = os.getenv('SECRET_KEY')        # JWT 서명을 위한 비밀키
 MONGO_URI = os.getenv('MONGO_URI')          # MongoDB URI 주소
 MONGO_DB_NAME = os.getenv('MONGO_DB_NAME')      # 사용할 MongoDB 데이터베이스 이름
 
 app = Flask(__name__)
+SECRET_KEY = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 app.secret_key = SECRET_KEY
 
 # MongoDB 클라이언트 연결 및 DB 생성
@@ -31,7 +30,7 @@ users_collection = db['users']      # 사용자 정보 저장 컬렉션
 crawlJobs_collection = db['crawl_jobs']     # 크롤링 잡 정보
 posts_collection = db['posts']          # 게시글 정보 저장 컬렉션
 
-PAGE = 20       # 페이징 처리를 위한 한 페이지 당 카드 수
+PAGE = 50       # 페이징 처리를 위한 한 페이지 당 카드 수
 
 # 회원 가입 페이지 반환
 @app.route('/register', methods=['POST', 'GET'])
@@ -69,43 +68,6 @@ def register():
     result = register_user(data, users_collection, crawlJobs_collection)
     return redirect('./')
 
-# # 로그인 요청 처리
-# @app.route('/login', methods=['POST'])
-# def login():
-#     data = request.form.to_dict()
-#     user_id = data.get('id')        # 아이디 추출
-#     password = data.get('password')     # 비밀번호 추출
-
-#     # 아이디 또는 비밀번호 하나라도 없으면 에러 발생
-#     if not user_id or not password:
-#         return "ID와 비밀번호를 입력해주세요.", 400
-
-#     # 로그인 서비스 함수 호출
-#     result = login_user(user_id, password, users_collection, SECRET_KEY)
-
-#     if result['result'] == 'success':
-#         user = get_user_by_id(user_id, users_collection)
-
-#         session['user_id'] = user_id
-#         session['profile_image'] = user.get('profile_image', 'default.png')  # None일 경우 default 처리
-
-#         print(f"Session profile_image: {session['profile_image']}")  # 디버깅용 출력
-
-#         response = make_response(redirect('/'))
-#         token = result['token']
-
-#         response.set_cookie(
-#             'access_token',
-#             token,
-#             httponly=True,
-#             samesite='Lax',
-#             secure=True  # 배포 시 True로 변경 권장
-#         )
-#         return response
-#     else:
-#         return result['message'], 401
-
-
 @app.route('/login', methods=['POST', 'GET'])
 def login():
     if request.method == 'GET':
@@ -137,7 +99,7 @@ def login():
         return redirect('./')
 
 # 토큰 인증 필요할 경우 사용 (마이 페이지 사용 시)
-@app.route('/mypage')
+@app.route('/edit', methods=['GET'])
 def mypage():
     token = request.cookies.get('access_token')     # 브라우저 쿠키에 저장된 JWT 토큰을 가져와 token에 저장
     if not token:
@@ -151,11 +113,13 @@ def mypage():
         if not user:
             return redirect('/login')       # ID는 유효하지만 DB에 사용자가 존재하지 않는 경우 다시 로그인 유도 (회원 탈퇴, 비활성화 경우 -> 계정은 삭제 되었지만 토큰은 유효할 수 있다.)
 
-        return render_template('mypage.html', user=user)        # 인증 성공시 마이 페이지로 이동, 유저 객체를 템플릿에 넘겨 유저 정보 표시
     except jwt.ExpiredSignatureError:       # 토큰 만료시간이 지난 경우
         return redirect('/login')       # 재발급을 위해 로그인 리다이렉트
     except jwt.InvalidTokenError:       # 토큰이 위조 되었거나 구조가 잘못된 경우
         return redirect('/login')       # 로그인 리다이텍트
+
+    cards = list(posts_collection.find())
+    return render_template('blog_edit.html', cards=cards, user=user)
 
 # 로그아웃
 @app.route('/logout')
@@ -166,12 +130,6 @@ def logout():
 
 # 카드 목록 전체 불러오기 (메인 페이지)
 CARDS = list(posts_collection.find())
-
-def slice_page(cursor: int):
-    subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS   # 커서가 있다면 이후 항목만 추출
-    subset = subset[: PAGE + 1]         # 다음 페이지 유무 확인용
-    next_cur = subset[-1]["_id"] if len(subset) > PAGE else None    # 다음 커서 설정
-    return subset[:PAGE], next_cur
 
 @app.route("/")
 def home():
@@ -198,32 +156,37 @@ def home():
     print("user_id from token:", user_id)
     print("profile_image:", profile_image)
 
-    cards, next_cursor = slice_page(cursor=0)       # 카드 데이터 페이징
-    print("cards loaded:", len(cards))
-    print("next_cursor:", next_cursor)
+    # cards, next_cursor = slice_page(cursor=0)       # 카드 데이터 페이징
 
     return render_template(
         "home.html",
-        cards=cards,
-        next_cursor=next_cursor,
+        cards=CARDS,
+        # next_cursor=next_cursor,
         user_id=user_id,
         profile_image=profile_image
     )
 
-# 카드 데이터만 AJAX로 로드할 떄 사용되는 API
+def slice_page(cursor=None):
+    cursor = ObjectId(cursor) if cursor else None
+    subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS
+    subset = subset[: PAGE + 1]
+    next_cursor = str(subset[-1]["_id"]) if len(subset) > PAGE else None
+    return subset[:PAGE], next_cursor
+
 @app.route("/api/cards")
 def api_cards():
-    cursor = int(request.args.get("cursor", 0))     # 요청 커서 값
+    cursor = request.args.get("cursor", None)
     cards, next_cursor = slice_page(cursor)
-    html = render_template("_card_frag.html", cards=cards)      # 카드 프래그먼트 렌더링
-    return jsonify(html=html, next_cursor=next_cursor)
+    html = render_template("_card_frag.html", cards=cards)
+    return jsonify({
+        "html": html,
+        "next_cursor": next_cursor
+    })
 
-# 회원정보 수정
 @app.route("/edit", methods=['POST', 'GET'])
 def update_user():
     token = request.cookies.get('access_token')  # 브라우저 쿠키에서 JWT 토큰을 가져옴
     if not token:
-        # return jsonify({'result': 'fail', 'message': '인증이 필요합니다.'}), 401  # 인증 없으면 401 에러
         redirect('/login')
 
     try:
@@ -231,18 +194,12 @@ def update_user():
         user_id = payload['id']  # 토큰에서 사용자 ID 추출
         user = users_collection.find_one({'id': user_id})  # DB에서 사용자 정보 조회
         if not user:
-            # return jsonify({'result': 'fail', 'message': '사용자가 존재하지 않습니다.'}), 404  # 사용자가 없는 경우
            return redirect('/login')
     except (ExpiredSignatureError, InvalidTokenError):
         return redirect('/login')
 
     if request.method == 'GET':
         return render_template('base.html', user=user)
-
-    # except jwt.ExpiredSignatureError:  # 만료된 토큰 처리
-    #     return jsonify({'result': 'fail', 'message': '토큰이 만료되었습니다. 로그인해주세요.'}), 401
-    # except jwt.InvalidTokenError:  # 잘못된 토큰 처리
-    #     return jsonify({'result': 'fail', 'message': '잘못된 토큰입니다. 다시 로그인해주세요.'}), 401
 
     # 사용자 정보 수정 함수 호출
     data = request.json
@@ -320,8 +277,6 @@ def update_profile():
 def update_blog():
     update_user_info
     return
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
