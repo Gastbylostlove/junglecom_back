@@ -25,16 +25,17 @@
 {% for card in cards %}
 <div class="col-md-4 mb-4">
   <div class="card h-100 border rounded">
-    <div class="card-body p-3">
-      <img src="data:image/jpeg;base64,{{ card.ogImage }}" class="card-img-top mb-2"
+    <div class="card-body p-3" style="position: relative;">
+      <img src="data:image/jpeg;base64,{{ card.ogImage }}"
+        class="card-img-top mb-2"
         style="height: 150px; object-fit: cover;">
-      <a href="{{ card.guid }}" class="stretched-link text-dark fw-bold d-block mb-4 mt-2"
-        style="word-break: break-all;  font-weight: bold;" target="_blank">
+      <a href="{{ card.guid }}"
+        class="stretched-link text-dark fw-bold d-block mb-4 mt-2"
+        style="word-break: break-all;">
         {{ card.title }}
       </a>
       <p class="mb-3">{{ card.description[:200] }}</p>
     </div>
-
     {% if request.endpoint != 'home' %}
     <div class="card-footer bg-white border-0 text-center">
       <form method="POST" action="/viewtoggle_edit">
