@@ -3,14 +3,14 @@ from datetime import datetime
 
 animal_icons = {
     1: "monkey.png",
-    2: "gorilla.png",
-    3: "orangutan.png",
-    4: "tiger.png",
-    5: "bison.png",
-    6: "deer.png",
-    7: "zebra.png",
-    8: "donkey.png",
-    9: "leopard.png"
+    2: "cow.png",
+    3: "panda.png",
+    4: "polar.png",
+    5: "bear.png",
+    6: "mouse.png",
+    7: "frog.png",
+    8: "hamster.png",
+    9: "koala.png"
 }
 
 
