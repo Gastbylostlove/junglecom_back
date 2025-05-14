@@ -128,4 +128,5 @@ def api_cards():
     return jsonify(html=html, next_cursor=next_cursor)
 
 if __name__ == '__main__':
+    print("1")
     app.run(debug=True)
