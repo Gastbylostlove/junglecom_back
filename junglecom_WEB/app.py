@@ -30,7 +30,7 @@ users_collection = db['users']      # 사용자 정보 저장 컬렉션
 crawlJobs_collection = db['crawl_jobs']     # 크롤링 잡 정보
 posts_collection = db['posts']          # 게시글 정보 저장 컬렉션
 
-PAGE = 50       # 페이징 처리를 위한 한 페이지 당 카드 수
+# PAGE = 50       # 페이징 처리를 위한 한 페이지 당 카드 수
 
 # 회원 가입 페이지 반환
 @app.route('/register', methods=['POST', 'GET'])
@@ -166,22 +166,22 @@ def home():
         profile_image=profile_image
     )
 
-def slice_page(cursor=None):
-    cursor = ObjectId(cursor) if cursor else None
-    subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS
-    subset = subset[: PAGE + 1]
-    next_cursor = str(subset[-1]["_id"]) if len(subset) > PAGE else None
-    return subset[:PAGE], next_cursor
+# def slice_page(cursor=None):
+#     cursor = ObjectId(cursor) if cursor else None
+#     subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS
+#     subset = subset[: PAGE + 1]
+#     next_cursor = str(subset[-1]["_id"]) if len(subset) > PAGE else None
+#     return subset[:PAGE], next_cursor
 
-@app.route("/api/cards")
-def api_cards():
-    cursor = request.args.get("cursor", None)
-    cards, next_cursor = slice_page(cursor)
-    html = render_template("_card_frag.html", cards=cards)
-    return jsonify({
-        "html": html,
-        "next_cursor": next_cursor
-    })
+# @app.route("/api/cards")
+# def api_cards():
+#     cursor = request.args.get("cursor", None)
+#     cards, next_cursor = slice_page(cursor)
+#     html = render_template("_card_frag.html", cards=cards)
+#     return jsonify({
+#         "html": html,
+#         "next_cursor": next_cursor
+#     })
 
 @app.route("/edit", methods=['POST', 'GET'])
 def update_user():
@@ -217,13 +217,13 @@ def viewtoggle_edit():
         insert = False
     else:
         insert = True
-    
+
     posts_collection.update_one(
         {
             "guid": request.form["card_guid"]
         },
         {
-            "$set" : 
+            "$set" :
                 {
                     "viewToggle" : insert
                 }
