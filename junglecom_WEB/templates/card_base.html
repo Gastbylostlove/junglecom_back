@@ -1,4 +1,4 @@
-{% for card in cards %}
+<!-- {% for card in cards %}
 <div class="col-md-4 mb-2 position-relative">
   <div class="card h-100 border rounded p-3">
     <img src="data:image/jpeg;base64,{{ card.ogImage }}" class="card-img-top mb-2"
@@ -11,7 +11,7 @@
   </div>
   {% if request.endpoint != 'home' %}
   <form method="POST" action="/viewtoggle_edit"
-    class="position-absolute top-0 start-50 m-2 text-center translate-middle-x ">
+    class="position-absolute top-0 start-50 m-2 text-center translate-middle-x mb-4">
     <input type="hidden" name="card_guid" value="{{ card.guid }}">
     <input type="hidden" name="card_viewToggle" value="{{ card.viewToggle }}">
     <button class="btn btn-sm {% if card.viewToggle %}btn-success{% else %}btn-secondary{% endif %}">
@@ -19,5 +19,34 @@
     </button>
   </form>
   {% endif %}
+</div>
+{% endfor %} -->
+
+{% for card in cards %}
+<div class="col-md-4 mb-4">
+  <div class="card h-100 border rounded">
+    <div class="card-body p-3" style="position: relative;">
+      <img src="data:image/jpeg;base64,{{ card.ogImage }}"
+        class="card-img-top mb-2"
+        style="height: 150px; object-fit: cover;">
+      <a href="{{ card.guid }}"
+        class="stretched-link text-dark fw-bold d-block mb-4 mt-2"
+        style="word-break: break-all;  font-weight: bold;" target="_blank">
+        {{ card.title }}
+      </a>
+      <p class="mb-3">{{ card.description[:200] }}</p>
+    </div>
+    {% if request.endpoint != 'home' %}
+    <div class="card-footer bg-white border-0 text-center">
+      <form method="POST" action="/viewtoggle_edit">
+        <input type="hidden" name="card_guid" value="{{ card.guid }}">
+        <input type="hidden" name="card_viewToggle" value="{{ card.viewToggle }}">
+        <button class="btn btn-sm {{ 'btn-success' if card.viewToggle else 'btn-secondary' }}">
+          {{ '보이기' if card.viewToggle else '숨기기' }}
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endfor %}
