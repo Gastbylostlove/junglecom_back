@@ -128,14 +128,12 @@ def logout():
     response.set_cookie('access_token', '', max_age=0)  # 쿠키 삭제 : set_cookie는 쿠키를 설정하는 함수지만, value는 빈 문자열, max_age = 0(만료시간 0초라는 의미)을 함께 지정하면 쿠키 삭제 의미
     return response
 
-# 카드 목록 전체 불러오기 (메인 페이지)
-CARDS = list(posts_collection.find())
-
-@app.route("/")
+@app.route('/', methods=['GET'])
 def home():
     token = request.cookies.get('access_token')
     user_id = None
     profile_image = 'default.png'  # 기본값
+    keyword = request.args.get('search')
 
     if token:
         try:
@@ -155,33 +153,23 @@ def home():
 
     print("user_id from token:", user_id)
     print("profile_image:", profile_image)
-
-    # cards, next_cursor = slice_page(cursor=0)       # 카드 데이터 페이징
+    
+    if keyword is not None:
+        posts = posts_collection.find({
+            "$or": [
+                {"title": {"$regex": keyword, "$options": "i"}},
+                {"description": {"$regex": keyword, "$options": "i"}}
+            ]
+            })
+    else:
+        posts = posts_collection.find()
 
     return render_template(
         "home.html",
-        cards=CARDS,
-        # next_cursor=next_cursor,
+        cards=list(posts),
         user_id=user_id,
         profile_image=profile_image
     )
-
-def slice_page(cursor=None):
-    cursor = ObjectId(cursor) if cursor else None
-    subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS
-    subset = subset[: PAGE + 1]
-    next_cursor = str(subset[-1]["_id"]) if len(subset) > PAGE else None
-    return subset[:PAGE], next_cursor
-
-@app.route("/api/cards")
-def api_cards():
-    cursor = request.args.get("cursor", None)
-    cards, next_cursor = slice_page(cursor)
-    html = render_template("_card_frag.html", cards=cards)
-    return jsonify({
-        "html": html,
-        "next_cursor": next_cursor
-    })
 
 @app.route("/edit", methods=['POST', 'GET'])
 def update_user():
