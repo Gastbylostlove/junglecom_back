@@ -1,52 +1,59 @@
 from flask import Flask, request, jsonify, render_template, make_response, redirect, session
-from services.edit_service import update_user_info
-from services.user_service import register_user
-from services.auth_service import login_user
-from services.auth_service import get_user_by_id        # 삭제 가능
-from pymongo import MongoClient
-import jwt
-from jwt import ExpiredSignatureError, InvalidTokenError
-from datetime import datetime, timedelta
-import secrets
-import os
-from dotenv import load_dotenv
+from services.edit_service import update_user_info      # 사용자 정보 수정 서비스 함수
+from services.user_service import register_user         # 회원가입 처리 함수
+from services.auth_service import login_user            # 로그인 처리 함수
+from services.auth_service import get_user_by_id        # 사용자 ID로 정보 조회
+from pymongo import MongoClient                         # MongoDB와 연결하기 위한 클라이언트
+import jwt                  # JWT 사용
+from jwt import ExpiredSignatureError, InvalidTokenError        # JWT 예외 처리용
+from datetime import datetime, timedelta        # 토큰 유효 시간 설정에  사용
+import secrets      # 세션 키 등 보안용 랜덤 문자열 생성
+import os       # OS 환경 변수 접근
+from dotenv import load_dotenv      # .env 파일에서 환경 변수 로드
 
 
 # .env 로드 및 환경 변수 설정
 load_dotenv()
 
-SECRET_KEY = os.getenv('SECRET_KEY')
-MONGO_URI = os.getenv('MONGO_URI')
-MONGO_DB_NAME = os.getenv('MONGO_DB_NAME')
+SECRET_KEY = os.getenv('SECRET_KEY')        # JWT 서명을 위한 비밀키
+MONGO_URI = os.getenv('MONGO_URI')          # MongoDB URI 주소
+MONGO_DB_NAME = os.getenv('MONGO_DB_NAME')      # 사용할 MongoDB 데이터베이스 이름
 
-app = Flask(__name__)
+app = Flask(__name__)       
 app.secret_key = SECRET_KEY
 
+# MongoDB 클라이언트 연결 및 DB 생성
 client = MongoClient(MONGO_URI)
 db = client[MONGO_DB_NAME]
 
-users_collection = db['users']
-crawlJobs_collection = db['crawl_jobs']
-posts_collection = db['posts']
+# DB 컬레션 참조 변수
+users_collection = db['users']      # 사용자 정보 저장 컬렉션
+crawlJobs_collection = db['crawl_jobs']     # 크롤링 잡 정보
+posts_collection = db['posts']          # 게시글 정보 저장 컬렉션
 
-PAGE = 20
+PAGE = 20       # 페이징 처리를 위한 한 페이지 당 카드 수
 
+# 회원 가입 페이지 반환
 @app.route('/register')
 def register_page():
     return render_template('register.html')
 
+# 로그인 페이지 반환
 @app.route('/login')
 def login_page():
     return render_template('login.html')
 
-# 회원가입
+# 회원가입 요청 처리
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.form.to_dict()
-    required = ['name', 'id', 'password', 'email', 'season']        # 필수 항목만
+    data = request.form.to_dict()       # form 데이터를 딕셔너리로 변환
+    required = ['name', 'id', 'password', 'email', 'season']        # 필수 입력 항목 목록
+
+    # 모든 필수 항목이 입력되었는지 검증
     if not all(data.get(f) for f in required):
         return jsonify({'result': 'fail', 'message': '필수 항목을 모두 입력해주세요'}), 400
 
+    # 사용자 등록 로직 호출
     result = register_user(data, users_collection, crawlJobs_collection)
     return redirect('./')
 
@@ -85,15 +92,18 @@ def register():
 #     else:
 #         return redirect('./')
 
+# 로그인 요청 처리
 @app.route('/login', methods=['POST'])
 def login():
     data = request.form.to_dict()
-    user_id = data.get('id')
-    password = data.get('password')
+    user_id = data.get('id')        # 아이디 추출
+    password = data.get('password')     # 비밀번호 추출
 
+    # 아이디 또는 비밀번호 하나라도 없으면 에러 발생
     if not user_id or not password:
         return "ID와 비밀번호를 입력해주세요.", 400
 
+    # 로그인 서비스 함수 호출
     result = login_user(user_id, password, users_collection, SECRET_KEY)
 
     if result['result'] == 'success':
@@ -153,12 +163,13 @@ def logout():
     response.set_cookie('access_token', '', max_age=0)  # 쿠키 삭제 : set_cookie는 쿠키를 설정하는 함수지만, value는 빈 문자열, max_age = 0(만료시간 0초라는 의미)을 함께 지정하면 쿠키 삭제 의미
     return response
 
+# 카드 목록 전체 불러오기 (메인 페이지)
 CARDS = list(posts_collection.find())
 
 def slice_page(cursor: int):
-    subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS
-    subset = subset[: PAGE + 1]
-    next_cur = subset[-1]["_id"] if len(subset) > PAGE else None
+    subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS   # 커서가 있다면 이후 항목만 추출
+    subset = subset[: PAGE + 1]         # 다음 페이지 유무 확인용
+    next_cur = subset[-1]["_id"] if len(subset) > PAGE else None    # 다음 커서 설정
     return subset[:PAGE], next_cur
 
 # @app.route("/")
@@ -207,7 +218,7 @@ def home():
     print("user_id from token:", user_id)
     print("profile_image:", profile_image)
 
-    cards, next_cursor = slice_page(cursor=0)
+    cards, next_cursor = slice_page(cursor=0)       # 카드 데이터 페이징
     print("cards loaded:", len(cards))
     print("next_cursor:", next_cursor)
 
@@ -221,12 +232,12 @@ def home():
 
 
 
-
+# 카드 데이터만 AJAX로 로드할 떄 사용되는 API
 @app.route("/api/cards")
 def api_cards():
-    cursor = int(request.args.get("cursor", 0))
+    cursor = int(request.args.get("cursor", 0))     # 요청 커서 값
     cards, next_cursor = slice_page(cursor)
-    html = render_template("_card_frag.html", cards=cards)
+    html = render_template("_card_frag.html", cards=cards)      # 카드 프래그먼트 렌더링
     return jsonify(html=html, next_cursor=next_cursor)
 
 
