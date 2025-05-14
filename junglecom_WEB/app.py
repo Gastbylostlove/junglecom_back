@@ -10,6 +10,7 @@ from datetime import datetime, timedelta        # 토큰 유효 시간 설정에
 import os       # OS 환경 변수 접근
 from dotenv import load_dotenv      # .env 파일에서 환경 변수 로드
 from bson import ObjectId
+from services.user_service import animal_icons
 
 # .env 로드 및 환경 변수 설정
 load_dotenv()
@@ -139,15 +140,17 @@ def home():
             ]
             })
     else:
-        posts = list(posts_collection.find({"viewToggle": True}))
+        posts = list(posts_collection.find({"viewToggle": True}).sort("_id", -1))
 
     for post in posts:
         user = db.users.find_one({'_id': ObjectId(post['userId'])})
         if user:
             season = user.get('season', '미정')
             name = user.get('name', '알 수 없음')
+            post['icon'] = animal_icons[season]
             post['user_display'] = f"{season}기-{name}"
         else:
+            post['icon'] = None
             post['user_display'] = "미정-알 수 없음"
 
     return render_template(
@@ -194,7 +197,7 @@ def blog_edit():
     except (ExpiredSignatureError, InvalidTokenError):
         return redirect('/login')
 
-    cards = posts_collection.find({"userId": user['_id']})
+    cards = posts_collection.find({"userId": user['_id']}).sort("_id", -1)
 
     return render_template('blog_edit.html', cards=list(cards), user=user)
 
