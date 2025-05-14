@@ -1,9 +1,9 @@
 {% for c in cards %}
-<a href="{{ c.link }}" style="text-decoration: none; color: inherit;" target="_blank">
+<a href="{{ c.guid }}" style="text-decoration: none; color: inherit;" target="_blank">
   <div class=" card border rounded p-3 my-2">
     <h5>{{ c.title }}</h5>
     <!-- <p class="mb-1">{{ c.description }}</p> -->
-    <p> {{ c.link }} </p>
+    <p> {{ c.guid }} </p>
   </div>
 </a>
 {% endfor %}
