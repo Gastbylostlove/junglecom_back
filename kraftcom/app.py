@@ -3,6 +3,7 @@ from services.user_service import register_user
 from services.auth_service import login_user
 from pymongo import MongoClient
 import jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -34,7 +35,7 @@ def register():
         return jsonify({'result': 'fail', 'message': '필수 항목을 모두 입력해주세요'}), 400
 
     result = register_user(data, users_collection, crawlJobs_collection)
-    return jsonify(result), 201 if result['result'] == 'success' else 409
+    return redirect('./')
 
 # 로그인
 @app.route('/login', methods=['POST'])
@@ -48,7 +49,7 @@ def login():
 
     result = login_user(user_id, password, users_collection, SECRET_KEY)    # login_user 모듈에서 사용자 존애 여부, 비밀번호 일치 검증
     if result['result'] == 'success':
-        response = make_response(jsonify({'message' : '로그인 성공'}))      # 로그인 성공 시 토큰 발급
+        response = make_response(redirect('/'))    # 로그인 성공 시 토큰 발급
         token = result['token']
 
         # 세션 쿠키로 설정(브라우저 종료 시 사라짐)
@@ -61,7 +62,7 @@ def login():
         )
         return response
     else:
-        return result['message'], 401
+        return redirect('./')
 
 # 토큰 인증 필요할 경우 사용 (마이 페이지 사용 시)
 @app.route('/mypage')
@@ -102,8 +103,22 @@ def slice_page(cursor: int):
 
 @app.route("/")
 def home():
+    token = request.cookies.get('access_token')
+    user_id = None
+
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+            user_id = payload.get('id')
+        except ExpiredSignatureError:
+            print("token expired")
+        except InvalidTokenError:
+            print("invalid token")
+
+    print(user_id)
+
     cards, next_cursor = slice_page(cursor=0) # 메인 화면에서는 cursor가 0
-    return render_template("home.html", cards=cards, next_cursor=next_cursor)
+    return render_template("home.html", cards=cards, next_cursor=next_cursor, user_id=user_id)
 
 @app.route("/api/cards")
 def api_cards():

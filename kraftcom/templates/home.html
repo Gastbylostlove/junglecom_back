@@ -24,8 +24,12 @@
     <div class="container d-flex justify-content-between align-items-center">
       <h2 class="mb-0">JungleCom</h2>
       <div>
+        {% if user_id %}
+        <a href="/mypage" class="btn btn-lg">🐵</a>
+        {% else %}
         <a href="/register" class="btn btn-outline-success btn-sm mr-2">회원가입</a>
         <a href="/login" class="btn btn-success btn-sm">로그인</a>
+        {% endif %}
       </div>
     </div>
   </header>
