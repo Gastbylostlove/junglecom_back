@@ -139,6 +139,7 @@ def home():
                 {"description": {"$regex": keyword, "$options": "i"}}
             ]
             })
+        posts = list(posts.sort("_id", -1))
     else:
         posts = list(posts_collection.find({"viewToggle": True}).sort("_id", -1))
 
