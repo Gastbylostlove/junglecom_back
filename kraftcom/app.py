@@ -97,9 +97,9 @@ def logout():
 CARDS = list(posts_collection.find())
 
 def slice_page(cursor: int):
-    subset = [c for c in CARDS if c["id"] < cursor] if cursor else CARDS
+    subset = [c for c in CARDS if c["_id"] < cursor] if cursor else CARDS
     subset = subset[: PAGE + 1]
-    next_cur = subset[-1]["id"] if len(subset) > PAGE else None
+    next_cur = subset[-1]["_id"] if len(subset) > PAGE else None
     return subset[:PAGE], next_cur
 
 @app.route("/")
@@ -153,7 +153,7 @@ def update_user():
     data = request.json
     if 'id' not in data:
         return jsonify({'result': 'fail', 'message': '아이디는 필수 입력입니다.'}), 400
-    
+
     result = edit_service.update_user_info(data, users_collection)
     return jsonify(result)
 
