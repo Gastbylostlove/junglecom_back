@@ -209,6 +209,27 @@ def update_user():
     result = update_user_info(data, users_collection)
     return jsonify(result)
 
+@app.route('/viewtoggle_edit', methods=['POST'])
+def viewtoggle_edit():
+    qwe = request.form["card_viewToggle"]
+    ewq = qwe
+    if request.form["card_viewToggle"] == 'True':
+        insert = False
+    else:
+        insert = True
+    
+    posts_collection.update_one(
+        {
+            "guid": request.form["card_guid"]
+        },
+        {
+            "$set" : 
+                {
+                    "viewToggle" : insert
+                }
+        }
+    )
+    return redirect('/blog_edit')
 
 @app.route('/blog_edit', methods=['GET'])
 def blog_edit():
