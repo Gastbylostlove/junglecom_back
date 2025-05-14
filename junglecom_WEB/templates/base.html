@@ -54,6 +54,10 @@
       font-weight: bold;
       margin-bottom: 50px;
     }
+
+    .sidebar a.active {
+      font-weight: 700;
+    }
   </style>
 </head>
 
@@ -64,8 +68,10 @@
       <!-- <h3>JungleCom</h3> -->
     </a>
     <nav>
-      <a href="{{ url_for('blog_edit')}}">블로그 수정</a>
-      <a href="{{ url_for('profile_edit')}}">정보 수정</a>
+      <a href="{{ url_for('blog_edit')}}" class="{% if request.endpoint == 'blog_edit' %}font-weight-bold{% endif %}">
+        블로그 수정</a>
+      <a href="{{ url_for('profile_edit')}}"
+        class="{% if request.endpoint == 'profile_edit' %}font-weight-bold{% endif %}">정보 수정</a>
     </nav>
     <form class="logout" action="{{ url_for('logout')}}" method="GET">
       <button class="btn btn-danger logout" styles="mt-4">로그아웃</button>
