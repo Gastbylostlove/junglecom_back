@@ -98,29 +98,6 @@ def login():
     else:
         return redirect('./')
 
-# 토큰 인증 필요할 경우 사용 (마이 페이지 사용 시)
-@app.route('/edit', methods=['GET'])
-def mypage():
-    token = request.cookies.get('access_token')     # 브라우저 쿠키에 저장된 JWT 토큰을 가져와 token에 저장
-    if not token:
-        return redirect('/login')       # 토큰이 없을 경우 로그인 페이지로 리다이렉트
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])       # 토큰 복호화 시도
-        user_id = payload['id']
-        user = users_collection.find_one({'id': user_id})       # 토큰을 통해 사용자 ID 추출한 것은 DB에 조회
-
-        if not user:
-            return redirect('/login')       # ID는 유효하지만 DB에 사용자가 존재하지 않는 경우 다시 로그인 유도 (회원 탈퇴, 비활성화 경우 -> 계정은 삭제 되었지만 토큰은 유효할 수 있다.)
-
-    except jwt.ExpiredSignatureError:       # 토큰 만료시간이 지난 경우
-        return redirect('/login')       # 재발급을 위해 로그인 리다이렉트
-    except jwt.InvalidTokenError:       # 토큰이 위조 되었거나 구조가 잘못된 경우
-        return redirect('/login')       # 로그인 리다이텍트
-
-    cards = list(posts_collection.find())
-    return render_template('blog_edit.html', cards=cards, user=user)
-
 # 로그아웃
 @app.route('/logout')
 def logout():
@@ -170,32 +147,6 @@ def home():
         user_id=user_id,
         profile_image=profile_image
     )
-
-@app.route("/edit", methods=['POST', 'GET'])
-def update_user():
-    token = request.cookies.get('access_token')  # 브라우저 쿠키에서 JWT 토큰을 가져옴
-    if not token:
-        redirect('/login')
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])  # 토큰 복호화
-        user_id = payload['id']  # 토큰에서 사용자 ID 추출
-        user = users_collection.find_one({'id': user_id})  # DB에서 사용자 정보 조회
-        if not user:
-           return redirect('/login')
-    except (ExpiredSignatureError, InvalidTokenError):
-        return redirect('/login')
-
-    if request.method == 'GET':
-        return render_template('base.html', user=user)
-
-    # 사용자 정보 수정 함수 호출
-    data = request.json
-    if 'id' not in data:
-        return jsonify({'result': 'fail', 'message': '아이디는 필수 입력입니다.'}), 400
-
-    result = update_user_info(data, users_collection)
-    return jsonify(result)
 
 @app.route('/viewtoggle_edit', methods=['POST'])
 def viewtoggle_edit():

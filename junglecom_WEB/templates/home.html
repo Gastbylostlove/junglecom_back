@@ -67,7 +67,7 @@
       <h2 class="mb-0">JungleCom</h2>
       <div>
         {% if user_id %}
-        <a href="/edit" class="btn btn-lg">
+        <a href="/blog_edit" class="btn btn-lg">
           <img src="{{ url_for('static', filename='images/' + (profile_image)) }}" alt="프로필 이미지"
             style="width: 32px; height: 32px; border-radius: 50%;">
         </a>
@@ -79,7 +79,7 @@
     </div>
   </header>
   <form method="GET" action="/">
-    <div class="input-group mb-4">
+    <div class="input-group mb-4 mx-auto" style="max-width: 400px;">
       <input type="text" class="form-control" name="search" placeholder="검색어를 입력하세요" aria-label="검색어 입력">
       <button class="btn btn-outline-primary" type="submit">검색</button>
     </div>
