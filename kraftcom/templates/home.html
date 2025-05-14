@@ -25,14 +25,19 @@
       <h2 class="mb-0">JungleCom</h2>
       <div>
         {% if user_id %}
-        <a href="/mypage" class="btn btn-lg">🐵</a>
+          <a href="/mypage" class="btn btn-lg">
+            <!-- <img src="{{ url_for('static', filename='images/' + (session['profile_image'] if session.get('profile_image') else 'default.png')) }}" alt="이모지" style="width:32px; height:32px; border-radius:50%;"> -->
+            <img src="{{ url_for('static', filename='images/' + (profile_image)) }}" alt="프로필 이미지" style="width: 32px; height: 32px; border-radius: 50%;">
+
+          </a>
         {% else %}
-        <a href="/register" class="btn btn-outline-success btn-sm mr-2">회원가입</a>
-        <a href="/login" class="btn btn-success btn-sm">로그인</a>
+          <a href="/register" class="btn btn-outline-success btn-sm mr-2">회원가입</a>
+          <a href="/login" class="btn btn-success btn-sm">로그인</a>
         {% endif %}
       </div>
     </div>
   </header>
+  
 
   <ul id="card-list" class="list-unstyled">
     {% include "_card_frag.html" %}

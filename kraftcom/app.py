@@ -1,18 +1,30 @@
-from flask import Flask, request, jsonify, render_template, make_response, redirect
+from flask import Flask, request, jsonify, render_template, make_response, redirect, session
 from services.edit_service import update_user_info
 from services.user_service import register_user
 from services.auth_service import login_user
+from services.auth_service import get_user_by_id        # 삭제 가능
 from pymongo import MongoClient
 import jwt
 from jwt import ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timedelta
+import secrets
+import os
+from dotenv import load_dotenv
+
+
+# .env 로드 및 환경 변수 설정
+load_dotenv()
+
+SECRET_KEY = os.getenv('SECRET_KEY')
+MONGO_URI = os.getenv('MONGO_URI')
+MONGO_DB_NAME = os.getenv('MONGO_DB_NAME')
 
 app = Flask(__name__)
-SECRET_KEY = 'apple'
+app.secret_key = SECRET_KEY
 
-# MongoDB 연결
-client = MongoClient('mongodb://abc1:abc1@54.180.249.140', 27017)
-db = client['JungleCom']
+client = MongoClient(MONGO_URI)
+db = client[MONGO_DB_NAME]
+
 users_collection = db['users']
 crawlJobs_collection = db['crawl_jobs']
 posts_collection = db['posts']
@@ -39,6 +51,40 @@ def register():
     return redirect('./')
 
 # 로그인
+# @app.route('/login', methods=['POST'])
+# def login():
+#     data = request.form.to_dict()
+#     user_id = data.get('id')
+#     password = data.get('password')
+
+#     if not user_id or not password:
+#         return "ID와 비밀번호를 입력해주세요.", 400     # ID 또는 PW가 비어 있을 경우 400 반환
+
+#     result = login_user(user_id, password, users_collection, SECRET_KEY)    # login_user 모듈에서 사용자 존애 여부, 비밀번호 일치 검증
+#     if result['result'] == 'success':
+
+#         # 로그인 성공 시  사용자 정보 가져오기
+#         user = users_collection.find_one({'id' : user_id})
+
+#         # 사용자 정보 세션에 저장
+#         session['user_id'] = user_id
+#         session['profile_image'] = user.get('profile_image')
+
+#         response = make_response(redirect('/'))    # 로그인 성공 시 토큰 발급
+#         token = result['token']
+
+#         # 세션 쿠키로 설정(브라우저 종료 시 사라짐)
+#         response.set_cookie(
+#             'access_token',     # 쿠키 이름
+#             token,              # 토큰 값
+#             httponly = True,    # js에서 접근 불가
+#             samesite = 'LAX',   # CSRF 완화
+#             secure = False      # HTTPS에서만 쿠키 전송
+#         )
+#         return response
+#     else:
+#         return redirect('./')
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.form.to_dict()
@@ -46,24 +92,37 @@ def login():
     password = data.get('password')
 
     if not user_id or not password:
-        return "ID와 비밀번호를 입력해주세요.", 400     # ID 또는 PW가 비어 있을 경우 400 반환
+        return "ID와 비밀번호를 입력해주세요.", 400
 
-    result = login_user(user_id, password, users_collection, SECRET_KEY)    # login_user 모듈에서 사용자 존애 여부, 비밀번호 일치 검증
+    result = login_user(user_id, password, users_collection, SECRET_KEY)
+
     if result['result'] == 'success':
-        response = make_response(redirect('/'))    # 로그인 성공 시 토큰 발급
+        # ✅ 로그인 성공: 사용자 정보 조회
+        user = get_user_by_id(user_id, users_collection)
+
+        # ✅ 세션에 사용자 정보 저장
+        session['user_id'] = user_id
+        session['profile_image'] = user.get('profile_image', 'default.png')  # None일 경우 default 처리
+
+        # 세션 저장 후 확인 (디버깅)
+        print(f"Session profile_image: {session['profile_image']}")  # 디버깅용 출력
+
+        # ✅ 응답에 토큰을 쿠키로 포함시켜 리다이렉트
+        response = make_response(redirect('/'))
         token = result['token']
 
-        # 세션 쿠키로 설정(브라우저 종료 시 사라짐)
         response.set_cookie(
-            'access_token',     # 쿠키 이름
-            token,              # 토큰 값
-            httponly = True,    # js에서 접근 불가
-            samesite = 'LAX',   # CSRF 완화
-            secure = False      # HTTPS에서만 쿠키 전송
+            'access_token',
+            token,
+            httponly=True,
+            samesite='Lax',
+            secure=True  # 배포 시 True로 변경 권장
         )
         return response
     else:
-        return redirect('./')
+        return result['message'], 401
+
+
 
 # 토큰 인증 필요할 경우 사용 (마이 페이지 사용 시)
 @app.route('/mypage')
@@ -102,24 +161,66 @@ def slice_page(cursor: int):
     next_cur = subset[-1]["_id"] if len(subset) > PAGE else None
     return subset[:PAGE], next_cur
 
+# @app.route("/")
+# def home():
+#     token = request.cookies.get('access_token')
+#     user_id = None
+
+#     if token:
+#         try:
+#             payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+#             user_id = payload.get('id')
+
+#         except ExpiredSignatureError:
+#             print("token expired")
+#         except InvalidTokenError:
+#             print("invalid token")
+    
+#     print(user_id)
+
+#     cards, next_cursor = slice_page(cursor=0) # 메인 화면에서는 cursor가 0
+#     return render_template("home.html", cards=cards, next_cursor=next_cursor, user_id=user_id)
+
+
 @app.route("/")
 def home():
     token = request.cookies.get('access_token')
     user_id = None
+    profile_image = 'default.png'  # 기본값
 
     if token:
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
             user_id = payload.get('id')
+
+            # 사용자 조회
+            user = db.users.find_one({'id': user_id})
+            if user:
+                print("user found:", user)
+                if user.get('profile_image'):
+                    profile_image = user['profile_image']
         except ExpiredSignatureError:
             print("token expired")
         except InvalidTokenError:
             print("invalid token")
 
-    print(user_id)
+    print("user_id from token:", user_id)
+    print("profile_image:", profile_image)
 
-    cards, next_cursor = slice_page(cursor=0) # 메인 화면에서는 cursor가 0
-    return render_template("home.html", cards=cards, next_cursor=next_cursor, user_id=user_id)
+    cards, next_cursor = slice_page(cursor=0)
+    print("cards loaded:", len(cards))
+    print("next_cursor:", next_cursor)
+
+    return render_template(
+        "home.html",
+        cards=cards,
+        next_cursor=next_cursor,
+        user_id=user_id,
+        profile_image=profile_image
+    )
+
+
+
 
 @app.route("/api/cards")
 def api_cards():
@@ -154,7 +255,7 @@ def update_user():
     if 'id' not in data:
         return jsonify({'result': 'fail', 'message': '아이디는 필수 입력입니다.'}), 400
 
-    result = edit_service.update_user_info(data, users_collection)
+    result = update_user_info(data, users_collection)
     return jsonify(result)
 
 

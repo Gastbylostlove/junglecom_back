@@ -2,16 +2,17 @@ from werkzeug.security import generate_password_hash        # 비밀번호를 SH
 from datetime import datetime
 
 animal_icons = {
-    1 : "https://em-content.zobj.net/source/apple/419/monkey_1f412.png",
-    2 : "https://em-content.zobj.net/source/apple/419/gorilla_1f98d.png",
-    3 : "https://em-content.zobj.net/source/apple/419/orangutan_1f9a7.png",
-    4 : "https://em-content.zobj.net/source/apple/419/tiger_1f405.png",
-    5 : "https://em-content.zobj.net/source/apple/419/bison_1f9ac.png",
-    6 : "https://em-content.zobj.net/source/apple/419/deer_1f98c.png",
-    7 : "https://em-content.zobj.net/source/apple/419/zebra_1f993.png",
-    8 : "https://em-content.zobj.net/source/apple/419/donkey_1facf.png",
-    9 : "https://em-content.zobj.net/source/apple/419/leopard_1f406.png"
+    1: "monkey.png",
+    2: "gorilla.png",
+    3: "orangutan.png",
+    4: "tiger.png",
+    5: "bison.png",
+    6: "deer.png",
+    7: "zebra.png",
+    8: "donkey.png",
+    9: "leopard.png"
 }
+
 
 def register_user(data, users_collection, crawlJobs_collection):      # json 형식의 data (브라우저를 통해 받은 회원가입 정보)
     user_id = data['id']
@@ -23,9 +24,20 @@ def register_user(data, users_collection, crawlJobs_collection):      # json 형
     # 비밀번호 해시 처리  --> HASH + salt 조합을 사용하여 비밀번호 암호화
     hashed_pw = generate_password_hash(data['password'])
     
+    # season 값에 대한 검증 (필수 값 체크)
+    season = data.get('season')
+    if not season:
+        return {'result': 'fail', 'message': 'Season 값은 필수 입력입니다.'}
+
     # season 값에 따라 동물 아이콘 선택
-    season = int(data['season'])
-    animal_icon = animal_icons.get(season, '')  # 해당 season에 맞는 아이콘 URL
+    season = int(season)
+    
+    # season 값에 맞는 아이콘이 존재하는지 확인
+    if season not in animal_icons:
+        return {'result': 'fail', 'message': '유효하지 않은 시즌 값입니다. (1~9 사이의 값만 가능)'}
+    
+    animal_icon = animal_icons[season]  # 해당 season에 맞는 아이콘 URL
+    
 
     # MongoDB에 저장할 데이터 
     user_doc = {
@@ -33,7 +45,7 @@ def register_user(data, users_collection, crawlJobs_collection):      # json 형
         'id': user_id,
         'password': hashed_pw,
         'email': data['email'],
-        'season': data['season'],
+        'season': season,
         'blog': data.get('blog', ''),  # 공백 가능
         'profile_image' : animal_icon,
         'created_at': datetime.utcnow()

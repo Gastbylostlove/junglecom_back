@@ -27,3 +27,9 @@ def login_user(user_id, password, users_collection, secret_key):    # 로그인 
         'message': '로그인 성공',
         'token': token
     }
+
+
+## 지우기
+# 유저 정보를 id로 조회하는 헬퍼 함수
+def get_user_by_id(user_id, users_collection):
+    return users_collection.find_one({'id': user_id})
