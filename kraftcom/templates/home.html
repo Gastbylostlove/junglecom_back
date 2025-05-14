@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <title>JungleCom</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      max-width: 500px;
+      margin: 2rem auto;
+    }
+
+    #sentinel {
+      height: 1px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- <header>hello</header> -->
+  <header class="py-3 border-bottom mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <h2 class="mb-0">JungleCom</h2>
+      <div>
+        {% if user_id %}
+        <a href="/edit" class="btn btn-lg">
+          <!-- <img src="{{ url_for('static', filename='images/' + (session['profile_image'] if session.get('profile_image') else 'default.png')) }}" alt="이모지" style="width:32px; height:32px; border-radius:50%;"> -->
+          <img src="{{ url_for('static', filename='images/' + (profile_image)) }}" alt="프로필 이미지"
+            style="width: 32px; height: 32px; border-radius: 50%;">
+
+        </a>
+        {% else %}
+        <a href="/register" class="btn btn-outline-success btn-sm mr-2">회원가입</a>
+        <a href="/login" class="btn btn-success btn-sm">로그인</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+
+  <ul id="card-list" class="list-unstyled">
+    {% include "_card_frag.html" %}
+  </ul>
+
+  <div id="sentinel"></div>
+
+  <script>
+    let next = {{ next_cursor or 'null' }};
+    const guard = document.getElementById('sentinel');
+    const list = document.getElementById('card-list');
+
+    // IntersectionObserver
+    const io = new IntersectionObserver(async ([entry]) => {
+      if (!entry.isIntersecting || !next) return;
+      try {
+        console.log('Fetching cursor -> ', next)
+        const res = await fetch(`/api/cards?cursor=${next}`);
+        const data = await res.json();
+        list.insertAdjacentHTML('beforeend', data.html);
+        next = data.next_cursor;
+        console.log('Next cursor -> ', next)
+      } catch (err) { console.error(err); }
+    }, { rootMargin: '200px 0px' });
+
+    io.observe(guard);
+  </script>
+</body>
+
+</html>

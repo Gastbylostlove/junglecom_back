@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원정보 수정</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #00e000;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .sidebar .logo img {
+            width: 60px;
+        }
+
+        .sidebar nav ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar nav ul li {
+            margin: 15px 0;
+        }
+
+        .sidebar nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        .sidebar .logout {
+            margin-top: 50px;
+            background-color: #ff5733;
+            color: white;
+            padding: 10px;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f7f7f7;
+        }
+
+        .content h1 {
+            color: #00e000;
+            margin-bottom: 20px;
+        }
+
+        form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        form input:disabled {
+            background-color: #f0f0f0;
+        }
+
+        .save-btn {
+            background-color: #00e000;
+            color: white;
+            padding: 15px 0;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+
+        .save-btn:hover {
+            background-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo">
+                <img src="monkey.png" alt="logo">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#">블로그 수정</a></li>
+                    <li><a href="#">정보 수정</a></li>
+                </ul>
+            </nav>
+            <button class="logout">로그아웃</button>
+        </div>
+        <div class="content">
+            <h1>회원정보수정</h1>
+            <form action="/update_user" method="POST">
+                <label for="name">이름</label>
+                <input type="text" id="name" name="name" th:value="${user.name}" disabled>
+
+                <label for="id">아이디</label>
+                <input type="text" id="id" name="id" th:value="${user.id}" disabled>
+
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" name="password" placeholder="새 비밀번호 입력">
+
+                <label for="email">이메일</label>
+                <input type="email" id="email" name="email" th:value="${user.email}" disabled>
+
+                <label for="generation">기수</label>
+                <input type="text" id="season" name="season" th:value="${user.season}" disabled>
+
+                <label for="blog">블로그 주소</label>
+                <input type="text" id="blog" name="blog" th:value="${user.blog}">
+
+                <button type="submit" class="save-btn">SAVE</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
