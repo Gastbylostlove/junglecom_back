@@ -18,7 +18,7 @@ db = client.JungleCom
 
 driver = webdriver.Chrome() # requests의 처음에 내려주는 순수 html만 crawl 하는것이 아닌, 실제 렌더링된 데이터를 crawl을 하기 위해 selenium을 사용
 
-crawl_delay = timedelta(seconds=20) # 크롤링한 job에 딜레이 추가할 시간
+crawl_delay = timedelta(minutes=30) # 크롤링한 job에 딜레이 추가할 시간
 
 
 # 스케줄러로 작동시킬 크롤링 함수
@@ -29,7 +29,7 @@ def rss_crawling():
             print("Crawl job found")
             soup = crawl_from_job(job)
             if soup is not None:
-                insert_new_post(soup)
+                insert_new_post(soup, job)
         else:
             print("No crawl job found")
     except Exception as e:
@@ -93,11 +93,12 @@ def crawl_from_job(job):
         return None
 
 # item으로 posts 컬렉션을 find해서 없을 경우, insert 하는 함수
-def insert_new_post(soup):
+def insert_new_post(soup, job):
     for item in soup.find_all("item"):
         if db.posts.find_one({"guid": item.find("guid").text}) is None:            
             html_combined = get_all_frame_sources(item.find("guid").text)
             
+            userId = ObjectId(job["blog_id"])
             viewToggle = True
             title = item.find("title").text
             guid = item.find("guid").text
@@ -119,6 +120,7 @@ def insert_new_post(soup):
 
             db.posts.insert_one(
                 {
+                    "userId": userId,
                     "viewToggle": viewToggle,
                     "title": title,
                     "guid": guid,
