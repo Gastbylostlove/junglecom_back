@@ -18,6 +18,16 @@
       background: #ececec;
       padding: 20px;
       text-align: center;
+
+      display: flex;
+      flex-direction: column;
+
+      align-items: center;
+    }
+
+    .sidebar form.logout {
+      margin-top: auto;
+      width: 100%;
     }
 
     .sidebar a {
@@ -28,8 +38,9 @@
     }
 
     .logout {
-      margin-top: 50px;
+      margin-top: auto;
       width: 100%;
+
     }
 
     .content {
@@ -49,13 +60,14 @@
 <body>
   <div class="sidebar">
     <a href="{{ url_for('home')}}">
-      <h3>JungleCom</h3>
+      <img src="/static/images/logo2.png" class="header-logo" style="height: 110px;">
+      <!-- <h3>JungleCom</h3> -->
     </a>
     <nav>
       <a href="{{ url_for('blog_edit')}}">블로그 수정</a>
       <a href="{{ url_for('profile_edit')}}">정보 수정</a>
     </nav>
-    <form action="{{ url_for('logout')}}" method="GET">
+    <form class="logout" action="{{ url_for('logout')}}" method="GET">
       <button class="btn btn-danger logout" styles="mt-4">로그아웃</button>
     </form>
   </div>
