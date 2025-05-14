@@ -16,13 +16,6 @@
       height: 1px;
     }
 
-    /* #card-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1rem;
-      padding: 0;
-    } */
-
     .main_card {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -57,14 +50,27 @@
       padding: 30px;
       overflow: auto;
     }
+
+    .header-container {
+      position: relative;
+      min-height: 160px;
+      /* 자식(로고)을 절대 배치할 기준 */
+    }
+
+    .header-logo {
+      position: absolute;
+      left: 50%;
+      /* 부모 컨테이너의 정확히 가운데 */
+      transform: translateX(-50%);
+      /* 자기 가로 길이의 절반만큼 왼쪽으로 이동 → 완전 중앙 */
+    }
   </style>
 </head>
 
 <body>
-  <!-- <header>hello</header> -->
   <header class="py-3 border-bottom mb-4">
-    <div class="container d-flex justify-content-between align-items-center">
-      <img src="/static/images/logo2.png" class="mx-auto" style="height: 150px;">
+    <div class="container header-container d-flex justify-content-end align-items-center">
+      <img src="/static/images/logo2.png" class="header-logo" style="height: 150px;">
       <div>
         {% if user_id %}
         <a href="/blog_edit" class="btn btn-lg">
@@ -91,27 +97,6 @@
   </div>
 
   <div id="sentinel"></div>
-  <!--
-  <script>
-    let next = {{ next_cursor or 'null' }};
-    const guard = document.getElementById('sentinel');
-    const list = document.getElementById('card-list');
-
-    // IntersectionObserver
-    const io = new IntersectionObserver(async ([entry]) => {
-      if (!entry.isIntersecting || !next) return;
-      try {
-        console.log('Fetching cursor -> ', next)
-        const res = await fetch(`/api/cards?cursor=${next}`);
-        const data = await res.json();
-        list.insertAdjacentHTML('beforeend', data.html);
-        next = data.next_cursor;
-        console.log('Next cursor -> ', next)
-      } catch (err) { console.error(err); }
-    }, { rootMargin: '200px 0px' });
-
-    io.observe(guard);
-  </script> -->
 </body>
 
 </html>
