@@ -9,11 +9,13 @@ app = Flask(__name__)
 SECRET_KEY = 'apple'
 
 # MongoDB 연결
-client = MongoClient('mongodb://localhost:27017/')
-db = client['user_db']
+client = MongoClient('mongodb://abc1:abc1@54.180.249.140', 27017)
+db = client['JungleCom']
 users_collection = db['users']
 crawlJobs_collection = db['crawl_jobs']
+posts_collection = db['posts']
 
+PAGE = 20
 
 @app.route('/register')
 def register_page():
@@ -27,7 +29,7 @@ def login_page():
 @app.route('/register', methods=['POST'])
 def register():
     data = request.form.to_dict()
-    required = ['name', 'id', 'password', 'email', 'season']        # 필수 항목만 
+    required = ['name', 'id', 'password', 'email', 'season']        # 필수 항목만
     if not all(data.get(f) for f in required):
         return jsonify({'result': 'fail', 'message': '필수 항목을 모두 입력해주세요'}), 400
 
@@ -90,8 +92,25 @@ def logout():
     response.set_cookie('access_token', '', max_age=0)  # 쿠키 삭제 : set_cookie는 쿠키를 설정하는 함수지만, value는 빈 문자열, max_age = 0(만료시간 0초라는 의미)을 함께 지정하면 쿠키 삭제 의미
     return response
 
+CARDS = list(posts_collection.find())
 
+def slice_page(cursor: int):
+    subset = [c for c in CARDS if c["id"] < cursor] if cursor else CARDS
+    subset = subset[: PAGE + 1]
+    next_cur = subset[-1]["id"] if len(subset) > PAGE else None
+    return subset[:PAGE], next_cur
 
+@app.route("/")
+def home():
+    cards, next_cursor = slice_page(cursor=0) # 메인 화면에서는 cursor가 0
+    return render_template("home.html", cards=cards, next_cursor=next_cursor)
+
+@app.route("/api/cards")
+def api_cards():
+    cursor = int(request.args.get("cursor", 0))
+    cards, next_cursor = slice_page(cursor)
+    html = render_template("_card_frag.html", cards=cards)
+    return jsonify(html=html, next_cursor=next_cursor)
 
 if __name__ == '__main__':
     app.run(debug=True)
