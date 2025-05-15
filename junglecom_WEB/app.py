@@ -131,7 +131,7 @@ def home():
 
     print("user_id from token:", user_id)
     print("profile_image:", profile_image)
-    
+
     if keyword is not None:
         posts = posts_collection.find({
             "$or": [
@@ -252,4 +252,4 @@ def update_blog():
     return
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
