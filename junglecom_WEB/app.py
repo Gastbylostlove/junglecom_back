@@ -23,7 +23,7 @@ SECRET_KEY = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 app.secret_key = SECRET_KEY
 
 # MongoDB 클라이언트 연결 및 DB 생성
-client = MongoClient('mongodb://abc1:abc1@54.180.249.140:27017')
+client = MongoClient(MONGO_URI)
 db = client[MONGO_DB_NAME]
 
 # DB 컬레션 참조 변수
@@ -139,7 +139,7 @@ def home():
                 {"description": {"$regex": keyword, "$options": "i"}}
             ]
             })
-        posts = list(posts.sort("_id", -1))
+        posts = list(posts)
     else:
         posts = list(posts_collection.find({"viewToggle": True}).sort("_id", -1))
 

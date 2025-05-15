@@ -12,8 +12,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from readability import Document
 import base64
+import os
 
-client = MongoClient('mongodb://abc1:abc1@54.180.249.140', 27017)
+MONGO_URI = os.getenv('MONGO_URI')          # MongoDB URI 주소
+
+client = MongoClient(MONGO_URI)
 db = client.JungleCom
 
 driver = webdriver.Chrome() # requests의 처음에 내려주는 순수 html만 crawl 하는것이 아닌, 실제 렌더링된 데이터를 crawl을 하기 위해 selenium을 사용
